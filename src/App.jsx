@@ -1,23 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-// 1. Dashboard Component (Token removal handler ke sath)
+// 1. Dashboard Component
 function Dashboard({ onLogout }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white px-4">
       <div className="text-center bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl max-w-md w-full">
         <h1 className="text-4xl font-extrabold mb-4 text-indigo-400">Welcome! 🎉</h1>
         <p className="text-xl font-semibold text-white mb-2">This is your Dashboard</p>
-        <p className="text-sm text-slate-400">Next updates regarding to this is coming soon THANK YOU</p>
+        <p className="text-sm text-slate-400 mb-4">Next updates regarding to this is coming soon THANK YOU</p>
         
-        {/* Token Alert Indicator */}
-        <div className="mt-4 bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs text-emerald-400 font-mono break-all">
-          🔐 Token secured in LocalStorage!
+        <div className="bg-slate-900/80 p-3 rounded-xl border border-slate-700 text-xs text-emerald-400 font-mono break-all text-center">
+            Coming Soon
         </div>
         
         <button 
-          onClick={onLogout} // ✅ Log out par token delete karke state badal dega
-          className="mt-6 w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-rose-600/10"
+          onClick={onLogout} 
+          className="mt-6 w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-lg"
         >
           Log Out
         </button>
@@ -32,47 +31,36 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   
-  // Feedback states
   const [errors, setErrors] = useState({});
   const [serverMessage, setServerMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
 
-  // Dashboard toggle state
   const [isLoggedInSuccessfully, setIsLoggedInSuccessfully] = useState(false);
 
-  // 🔄 APP START HOTE HI CHECK KARO: Kya user pehle se logged in hai?
+  // 🔄 Strict Check: Sirf tabhi dashboard dikhao jab token physical roop se mojud ho
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      setIsLoggedInSuccessfully(true); // Token milte hi direct dashboard kholo
+    if (token && token !== "undefined" && token !== null) {
+      setIsLoggedInSuccessfully(true);
+    } else {
+      setIsLoggedInSuccessfully(false);
     }
   }, []);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) {
-      setErrors({ ...errors, [e.target.name]: '' });
-    }
+    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
   };
 
   const validateForm = () => {
     let localErrors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!isLogin && !formData.name.trim()) {
-      localErrors.name = 'Name is required';
-    }
-    if (!formData.email) {
-      localErrors.email = 'Email address is required';
-    } else if (!emailRegex.test(formData.email)) {
-      localErrors.email = 'Please provide a valid email';
-    }
-    if (!formData.password) {
-      localErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      localErrors.password = 'Password must be at least 6 characters';
-    }
-
+    if (!isLogin && !formData.name.trim()) localErrors.name = 'Name is required';
+    if (!formData.email) localErrors.email = 'Email address is required';
+    else if (!emailRegex.test(formData.email)) localErrors.email = 'Please provide a valid email';
+    if (!formData.password) localErrors.password = 'Password is required';
+    else if (formData.password.length < 6) localErrors.password = 'Password must be at least 6 characters';
+    
     setErrors(localErrors);
     return Object.keys(localErrors).length === 0;
   };
@@ -107,34 +95,32 @@ export default function App() {
         }
       }
 
-      // Safe Check for login detection
-      const isLoginAction = isLogin || endpoint.includes('login') || data.token;
+      // Strict Login check
+      const isLoginAction = isLogin || data.token;
 
-      setServerMessage({
-        type: 'success',
-        text: isLoginAction ? 'Login successful! Redirecting...' : 'Account created successfully!'
-      });
-      
-      // Clear forms
-      setFormData({ name: '', email: '', password: '' });
-
-      // Action Based on Success Response
       if (isLoginAction) {
-        // 🔥 GURUMANTRA LINE: Agar backend se token mila hai, toh use LocalStorage mein save kar do
+        // 🔥 Sabse pehle token localstorage mein save hoga, fir redirection!
         if (data.token) {
           localStorage.setItem('token', data.token);
+          
+          setServerMessage({ type: 'success', text: 'Login successful! Syncing token...' });
+          
+          setTimeout(() => {
+            setIsLoggedInSuccessfully(true); 
+          }, 1000);
+        } else {
+          // Agar login ho gaya par backend ne token bheja hi nahi
+          throw new Error("Backend responded without an auth token!");
         }
-
-        setTimeout(() => {
-          setIsLoggedInSuccessfully(true); 
-        }, 1000); // 1 second ka dashboard delay
       } else {
-        // Safe signup ke baad screen ko login mode par daal do
+        setServerMessage({ type: 'success', text: 'Account created successfully!' });
         setTimeout(() => {
           setIsLogin(true);
           setServerMessage({ type: '', text: '' });
         }, 1500);
       }
+      
+      setFormData({ name: '', email: '', password: '' });
       
     } catch (err) {
       if (err.message !== 'Validation failed') {
@@ -145,13 +131,11 @@ export default function App() {
     }
   };
 
-  // 🚪 Log Out Handler Function
   const handleLogout = () => {
-    localStorage.removeItem('token'); // LocalStorage se token delete!
-    setIsLoggedInSuccessfully(false);  // Screen wapas login form par switch
+    localStorage.removeItem('token');
+    setIsLoggedInSuccessfully(false);
   };
 
-  // Render dashboard if logged in
   if (isLoggedInSuccessfully) {
     return <Dashboard onLogout={handleLogout} />;
   }
@@ -159,101 +143,44 @@ export default function App() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
       <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8">
-        
-        {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-extrabold text-white">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
-          </h2>
-          <p className="text-sm text-slate-400 mt-2">
-            {isLogin ? 'Sign in to access your dashboard' : 'Get started for free today'}
-          </p>
+          <h2 className="text-3xl font-extrabold text-white">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+          <p className="text-sm text-slate-400 mt-2">{isLogin ? 'Sign in to access your dashboard' : 'Get started for free today'}</p>
         </div>
 
-        {/* Server Messages */}
         {serverMessage.text && (
-          <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${
-            serverMessage.type === 'success' 
-              ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400' 
-              : 'bg-rose-950/40 border-rose-500/30 text-rose-400'
-          }`}>
-            {serverMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+          <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${serverMessage.type === 'success' ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400' : 'bg-rose-950/40 border-rose-500/30 text-rose-400'}`}>
             <span className="text-sm font-medium">{serverMessage.text}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Name Field */}
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                  <User className="w-5 h-5" />
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="John Doe"
-                  className={`w-full bg-slate-900 border ${errors.name ? 'border-rose-500' : 'border-slate-700'} rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-                />
-              </div>
+              <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="John Doe" className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               {errors.name && <p className="text-xs text-rose-400 mt-1">{errors.name}</p>}
             </div>
           )}
 
-          {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                <Mail className="w-5 h-5" />
-              </div>
-              <input
-                type="text"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="you@example.com"
-                className={`w-full bg-slate-900 border ${errors.email ? 'border-rose-500' : 'border-slate-700'} rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-              />
-            </div>
+            <input type="text" name="email" value={formData.email} onChange={handleInputChange} placeholder="you@example.com" className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             {errors.email && <p className="text-xs text-rose-400 mt-1">{errors.email}</p>}
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
-                <Lock className="w-5 h-5" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="••••••••"
-                className={`w-full bg-slate-900 border ${errors.password ? 'border-rose-500' : 'border-slate-700'} rounded-xl pl-10 pr-10 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500"
-              >
+              <input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-4 pr-10 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500">
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
             {errors.password && <p className="text-xs text-rose-400 mt-1">{errors.password}</p>}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition-all"
-          >
+          <button type="submit" disabled={loading} className="w-full mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl disabled:opacity-50">
             {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Sign Up'}
           </button>
         </form>
@@ -261,19 +188,11 @@ export default function App() {
         <div className="mt-6 text-center">
           <p className="text-sm text-slate-400">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setErrors({});
-                setServerMessage({ type: '', text: '' });
-              }}
-              className="text-indigo-400 hover:underline font-medium"
-            >
+            <button onClick={() => { setIsLogin(!isLogin); setErrors({}); setServerMessage({ type: '', text: '' }); }} className="text-indigo-400 hover:underline font-medium">
               {isLogin ? 'Create one' : 'Sign in'}
             </button>
           </p>
         </div>
-
       </div>
     </div>
   );
