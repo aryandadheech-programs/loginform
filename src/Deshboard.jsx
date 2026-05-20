@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Shield, UserX, Loader2 } from 'lucide-react';
 
-export default function Dashboard({ user, onLogout }) {
+export default function Deshboard({ user, onLogout }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Agar login karne wala banda admin hai, toh hi users list fetch karo
+    // 🔒 Security Check: Agar login karne wala banda admin hai, toh hi users list fetch karo
     if (user && user.role === 'admin') {
       fetchUsers();
     }
@@ -17,7 +17,6 @@ export default function Dashboard({ user, onLogout }) {
     setLoading(true);
     setError('');
     try {
-      // Kyunki backend cookies use kar raha hai, isliye credentials: true bhejna zaroori hai
       const response = await fetch('https://mernauth-backend-29ek.onrender.com/api/auth/users', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -84,7 +83,7 @@ export default function Dashboard({ user, onLogout }) {
         </button>
       </div>
 
-      {/* --- ADMIN DASHBOARD PANEL (Sirf Admin ko dikhega) --- */}
+      {/* 👑 ADMIN DASHBOARD PANEL (Sirf tabhi dikhega jab user.role === 'admin' hoga) */}
       {user?.role === 'admin' ? (
         <div className="max-w-5xl mx-auto bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden">
           <div className="p-6 border-b border-slate-700 bg-slate-800/50">
@@ -123,7 +122,7 @@ export default function Dashboard({ user, onLogout }) {
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="p-4 text-center">
-                        {u.id !== user?.id && u._id !== user?.id ? (
+                        {u._id !== user?.id && u.email !== user?.email ? (
                           <button
                             onClick={() => handleDeleteUser(u._id)}
                             className="inline-flex items-center gap-1.5 bg-rose-600/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-500 text-rose-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-lg transition-all"
@@ -143,7 +142,7 @@ export default function Dashboard({ user, onLogout }) {
           )}
         </div>
       ) : (
-        /* Normal User Message */
+        /* 👤 Normal User Message (Agar role 'admin' nahi hai) */
         <div className="max-w-5xl mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 text-center text-slate-400">
           <p className="text-lg">Aapka normal user account hai. Dashboard me naye updates jald hi aayenge! Thank you.</p>
         </div>

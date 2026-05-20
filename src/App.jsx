@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
-import Dashboard from './Dashboard'; // 👇 Naye alag kiye huye Dashboard component ko import kiya
+import Deshboard from './Deshboard';
 
 export default function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   
-  // Feedback states
   const [errors, setErrors] = useState({});
   const [serverMessage, setServerMessage] = useState({ type: '', text: '' });
   const [loading, setLoading] = useState(false);
 
-  // Dashboard aur Logged-in User ka data track karne ke liye states
   const [isLoggedInSuccessfully, setIsLoggedInSuccessfully] = useState(false);
   const [loggedInUser, setLoggedInUser] = useState(null);
 
@@ -76,27 +74,32 @@ export default function App() {
         }
       }
 
-      const isLoginAction = isLogin || endpoint.includes('login') || data.user;
-
-      setServerMessage({
-        type: 'success',
-        text: isLoginAction ? 'Login successful! Redirecting...' : 'Account created successfully!'
-      });
-      
-      // Clear forms
-      setFormData({ name: '', email: '', password: '' });
-
-      if (isLoginAction) {
-        // 👇 Backend se jo user details mili hain (id, name, email, role), use store kar rahe hain
+      // 🚨 FIX: Ab hum check karenge ki sach me Login click hua hai ya Signup
+      if (isLogin) {
+        setServerMessage({
+          type: 'success',
+          text: 'Login successful! Redirecting...'
+        });
+        setFormData({ name: '', email: '', password: '' });
         setLoggedInUser(data.user);
+        
         setTimeout(() => {
           setIsLoggedInSuccessfully(true); 
         }, 1000);
+
       } else {
+        // 👉 Agar sirf Sign Up (Naya account) kiya hai toh direct login nahi hoga!
+        setServerMessage({
+          type: 'success',
+          text: 'Account created successfully! Please sign in.'
+        });
+        setFormData({ name: '', email: '', password: '' });
+
+        // 2 Second baad screen ko login par shift kar dega taaki aap tab tak db edit kar sako
         setTimeout(() => {
           setIsLogin(true);
           setServerMessage({ type: '', text: '' });
-        }, 1500);
+        }, 2500);
       }
       
     } catch (err) {
@@ -104,14 +107,16 @@ export default function App() {
         setServerMessage({ type: 'error', text: err.message });
       }
     } finally {
-      loading && setLoading(false);
+      setLoading(false);
     }
   };
 
-  // Naya logout handler function (Bina page reload kiye state clear karega)
   const handleLogout = async () => {
     try {
-      await fetch('https://mernauth-backend-29ek.onrender.com/api/auth/logout', { method: 'POST' });
+      await fetch('https://mernauth-backend-29ek.onrender.com/api/auth/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
     } catch (err) {
       console.error("Logout error", err);
     }
@@ -120,26 +125,23 @@ export default function App() {
     setServerMessage({ type: '', text: '' });
   };
 
-  // 👇 Agar user successfully login ho chuka hai, toh naya Dashboard component render karo
   if (isLoggedInSuccessfully) {
-    return <Dashboard user={loggedInUser} onLogout={handleLogout} />;
+    return <Deshboard user={loggedInUser} onLogout={handleLogout} />;
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
       <div className="w-full max-w-md bg-slate-800 rounded-2xl shadow-xl border border-slate-700 p-8">
         
-        {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-white">
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p className="text-sm text-slate-400 mt-2">
-            {isLogin ? 'Sign in to access your dashboard' : 'Get started for free today'}
+            {isLogin ? 'Sign in to access your deshboard' : 'Get started for free today'}
           </p>
         </div>
 
-        {/* Server Messages */}
         {serverMessage.text && (
           <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 border ${
             serverMessage.type === 'success' 
@@ -152,7 +154,6 @@ export default function App() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Name Field */}
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1.5">Full Name</label>
@@ -173,7 +174,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
             <div className="relative">
@@ -192,7 +192,6 @@ export default function App() {
             {errors.email && <p className="text-xs text-rose-400 mt-1">{errors.email}</p>}
           </div>
 
-          {/* Password Field */}
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-1.5">Password</label>
             <div className="relative">
