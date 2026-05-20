@@ -7,7 +7,6 @@ export default function Deshboard({ user, onLogout }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // 🔒 Security Check: Agar login karne wala banda admin hai, toh hi users list fetch karo
     if (user && user.role === 'admin') {
       fetchUsers();
     }
@@ -16,11 +15,17 @@ export default function Deshboard({ user, onLogout }) {
   const fetchUsers = async () => {
     setLoading(true);
     setError('');
+    
+    // 🔑 LocalStorage se token uthao
+    const token = localStorage.getItem('token');
+
     try {
       const response = await fetch('https://mernauth-backend-29ek.onrender.com/api/auth/users', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Headers me token bheja
+        }
       });
 
       const data = await response.json();
@@ -39,12 +44,16 @@ export default function Deshboard({ user, onLogout }) {
 
   const handleDeleteUser = async (id) => {
     if (!window.confirm('Kya aap sach me is user ko delete karna chahte hain?')) return;
+    
+    const token = localStorage.getItem('token');
 
     try {
       const response = await fetch(`https://mernauth-backend-29ek.onrender.com/api/auth/users/${id}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Delete request me bhi token bheja
+        }
       });
 
       const data = await response.json();
@@ -53,7 +62,6 @@ export default function Deshboard({ user, onLogout }) {
         throw new Error(data.message || 'Failed to delete user');
       }
 
-      // UI se delete huye user ko turant hata do
       setUsers(users.filter(u => u._id !== id));
       alert('User successfully deleted!');
     } catch (err) {
@@ -61,9 +69,13 @@ export default function Deshboard({ user, onLogout }) {
     }
   };
 
+  const handleLogoutClick = () => {
+    localStorage.removeItem('token'); // Logout par token clear karo
+    onLogout();
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-4 md:p-8">
-      {/* Upper Welcome Section */}
       <div className="max-w-5xl mx-auto bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-extrabold text-indigo-400 flex items-center gap-2">
@@ -76,14 +88,13 @@ export default function Deshboard({ user, onLogout }) {
         </div>
         
         <button 
-          onClick={onLogout} 
+          onClick={handleLogoutClick} 
           className="bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-rose-950/20 w-full md:w-auto"
         >
           Log Out
         </button>
       </div>
 
-      {/* 👑 ADMIN DASHBOARD PANEL (Sirf tabhi dikhega jab user.role === 'admin' hoga) */}
       {user?.role === 'admin' ? (
         <div className="max-w-5xl mx-auto bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden">
           <div className="p-6 border-b border-slate-700 bg-slate-800/50">
@@ -92,7 +103,10 @@ export default function Deshboard({ user, onLogout }) {
           </div>
 
           {error && (
-            <p className="p-4 m-4 bg-rose-950/40 border border-rose-500/30 text-rose-400 rounded-xl text-sm">{error}</p>
+            <div className="p-4 m-4 bg-rose-950/40 border border-rose-500/30 text-rose-400 rounded-xl text-sm">
+              {error}
+              <p className="text-xs text-slate-400 mt-1">Tip: Agar token missing dikhaye, toh ek baar logout karke fir se login karein taaki naya token localstorage me save ho sake.</p>
+            </div>
           )}
 
           {loading ? (
@@ -122,7 +136,7 @@ export default function Deshboard({ user, onLogout }) {
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
                       <td className="p-4 text-center">
-                        {u._id !== user?.id && u.email !== user?.email ? (
+                        {u.email !== user?.email ? (
                           <button
                             onClick={() => handleDeleteUser(u._id)}
                             className="inline-flex items-center gap-1.5 bg-rose-600/10 hover:bg-rose-600 border border-rose-500/20 hover:border-rose-500 text-rose-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-lg transition-all"
@@ -142,7 +156,6 @@ export default function Deshboard({ user, onLogout }) {
           )}
         </div>
       ) : (
-        /* 👤 Normal User Message (Agar role 'admin' nahi hai) */
         <div className="max-w-5xl mx-auto bg-slate-800 p-8 rounded-2xl border border-slate-700 text-center text-slate-400">
           <p className="text-lg">Aapka normal user account hai. Dashboard me naye updates jald hi aayenge! Thank you.</p>
         </div>

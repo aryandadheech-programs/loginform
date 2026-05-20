@@ -57,7 +57,6 @@ export default function App() {
       const response = await fetch(`${baseURL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -74,13 +73,18 @@ export default function App() {
         }
       }
 
-      // 🚨 FIX: Ab hum check karenge ki sach me Login click hua hai ya Signup
       if (isLogin) {
         setServerMessage({
           type: 'success',
           text: 'Login successful! Redirecting...'
         });
         setFormData({ name: '', email: '', password: '' });
+        
+        // 🔑 TOKEN STORAGE: Backend se aaya hua token LocalStorage me save kiya
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        
         setLoggedInUser(data.user);
         
         setTimeout(() => {
@@ -88,14 +92,12 @@ export default function App() {
         }, 1000);
 
       } else {
-        // 👉 Agar sirf Sign Up (Naya account) kiya hai toh direct login nahi hoga!
         setServerMessage({
           type: 'success',
           text: 'Account created successfully! Please sign in.'
         });
         setFormData({ name: '', email: '', password: '' });
 
-        // 2 Second baad screen ko login par shift kar dega taaki aap tab tak db edit kar sako
         setTimeout(() => {
           setIsLogin(true);
           setServerMessage({ type: '', text: '' });
@@ -111,15 +113,9 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('https://mernauth-backend-29ek.onrender.com/api/auth/logout', { 
-        method: 'POST',
-        credentials: 'include'
-      });
-    } catch (err) {
-      console.error("Logout error", err);
-    }
+  const handleLogout = () => {
+    // 🔒 Clear token and user state on logout
+    localStorage.removeItem('token');
     setLoggedInUser(null);
     setIsLoggedInSuccessfully(false);
     setServerMessage({ type: '', text: '' });
@@ -138,7 +134,7 @@ export default function App() {
             {isLogin ? 'Welcome Back' : 'Create Account'}
           </h2>
           <p className="text-sm text-slate-400 mt-2">
-            {isLogin ? 'Sign in to access your deshboard' : 'Get started for free today'}
+            {isLogin ? 'Sign in to access your dashboard' : 'Get started for free today'}
           </p>
         </div>
 
